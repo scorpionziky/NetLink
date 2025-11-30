@@ -5,12 +5,19 @@ A simple, cross-platform command-line application for transferring files between
 ## Features
 
 ✅ Cross-platform support (Windows, Linux, macOS)
+
 ✅ No external dependencies (uses Python standard library only)
+
 ✅ Graphical user interface (GUI) and command-line interface (CLI)
+
 ✅ Service discovery: Find machines by name instead of IP address
+
 ✅ Multiple file transfer: Send multiple files in one go
+
 ✅ Directory transfer: Send entire folders with directory structure
+
 ✅ Progress indicator during transfer
+
 ✅ TCP socket-based transfer for reliability
 
 ## Windows GUI Version
