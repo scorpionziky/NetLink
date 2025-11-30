@@ -4,24 +4,40 @@ A simple, cross-platform command-line application for transferring files between
 
 ## Features
 
-- ✅ Cross-platform support (Windows, Linux, macOS)
-- ✅ No external dependencies (uses Python standard library only)
-- ✅ Graphical user interface (GUI) and command-line interface (CLI)
-- ✅ **Service discovery**: Find machines by name instead of IP address
-- ✅ **Multiple file transfer**: Send multiple files in one go
-- ✅ **Directory transfer**: Send entire folders with directory structure
-- ✅ Progress indicator during transfer
-- ✅ TCP socket-based transfer for reliability
-- ✅ Human-readable file size display
+✅ Cross-platform support (Windows, Linux, macOS)
+✅ No external dependencies (uses Python standard library only)
+✅ Graphical user interface (GUI) and command-line interface (CLI)
+✅ Service discovery: Find machines by name instead of IP address
+✅ Multiple file transfer: Send multiple files in one go
+✅ Directory transfer: Send entire folders with directory structure
+✅ Progress indicator during transfer
+✅ TCP socket-based transfer for reliability
+
+## Windows GUI Version
+
+A standalone **Windows GUI version** is also available as an **installable `.exe`**.
+
+➡️ **Download the Windows GUI version**
+*https://github.com/scorpionziky/file_transfer_app_0.1.3/releases/tag/0.1.3*
+
+The Windows installer provides:
+
+* Easy-to-use `.exe` setup
+* Full GUI without requiring Python
+* No external dependencies
+* Compatible with Windows 10 and 11
+* Complete interface for sending and receiving files or directories
+
+> **Note:** The `.exe` version is built using PyInstaller.
 
 ## Requirements
 
-- Python 3.6 or higher (no additional packages required)
+Python 3.6 or higher (no additional packages required)
 
 ## Installation
 
-1. Clone or download this repository
-2. No additional installation required - uses only Python standard library
+* Clone or download this repository
+* No additional installation required - uses only Python standard library
 
 ## Usage
 
@@ -29,28 +45,30 @@ A simple, cross-platform command-line application for transferring files between
 
 For a user-friendly graphical interface:
 
-```bash
+```
 python file_transfer_gui.py
 ```
 
 The GUI provides:
-- **Send File tab**: 
- - **Send Files tab**: 
-  - Automatically discover machines on your network by name
-  - Or manually enter receiver's IP address
-  - Select **multiple files** to send together
-  - Or select **folders** to send with directory structure
-  - Real-time progress indicator
-  - View transfer log
-- **Receive Files tab**: 
- - **Receive Files tab**: 
-  - Give your machine a friendly name for others to find
-  - Start/stop the receiver
-  - Choose output directory (files are auto-organized if from folders)
-  - See your IP address
-- Real-time transfer logs
-- Progress indicators
-- Easy file and directory browsing
+
+#### Send File tab:
+
+* Automatically discover machines on your network by name
+* Or manually enter receiver's IP address
+* Select multiple files to send together
+* Or select folders to send with directory structure
+* Real-time progress indicator
+* View transfer log
+
+#### Receive Files tab:
+
+* Give your machine a friendly name for others to find
+* Start/stop the receiver
+* Choose output directory (files are auto-organized if from folders)
+* See your IP address
+* Real-time transfer logs
+* Progress indicators
+* Easy file and directory browsing
 
 ### Command-Line Mode
 
@@ -58,16 +76,18 @@ The GUI provides:
 
 On the computer that will receive the file, start the server:
 
-```bash
+```
 python file_transfer.py receive --port 5000
 ```
 
 Optional arguments:
-- `--port`: Port to listen on (default: 5000)
-- `--output-dir`: Directory to save received files (default: current directory)
+
+* `--port`: Port to listen on (default: 5000)
+* `--output-dir`: Directory to save received files (default: current directory)
 
 Example with custom output directory:
-```bash
+
+```
 python file_transfer.py receive --port 5000 --output-dir ./received_files
 ```
 
@@ -75,150 +95,165 @@ python file_transfer.py receive --port 5000 --output-dir ./received_files
 
 On the computer that will send the file:
 
-```bash
+```
 python file_transfer.py send --host 192.168.1.100 --port 5000 --file document.pdf
 ```
 
 Required arguments:
-- `--host`: IP address or hostname of the receiving computer
-- `--file`: Path to the file you want to send
+
+* `--host`: IP address or hostname of the receiving computer
+* `--file`: Path to the file you want to send
 
 Optional arguments:
-- `--port`: Port of the receiver (default: 5000)
+
+* `--port`: Port of the receiver (default: 5000)
 
 ## How It Works
 
 ### Service Discovery
 
 The application automatically discovers other machines on your network using UDP multicast/broadcast:
-- When you open the GUI, it broadcasts a beacon announcing your machine name and receive port
-- Other machines on the network also broadcast their beacons
-- The list of machines updates in real-time as they are discovered
-- If automatic discovery fails, you can manually enter IP addresses instead
 
-**Discovery operates on port 5007 (UDP)** - Make sure your firewall allows outgoing and incoming UDP on this port.
+* When you open the GUI, it broadcasts a beacon announcing your machine name and receive port
+* Other machines on the network also broadcast their beacons
+* The list of machines updates in real-time as they are discovered
+* If automatic discovery fails, you can manually enter IP addresses instead
+
+Discovery operates on port **5007 (UDP)** — ensure your firewall allows outgoing and incoming UDP on this port.
 
 ### File Transfer Process
 
-1. The receiving computer starts a server that listens for incoming connections
-2. The sending computer connects to the server and transmits the file
-3. The transfer includes:
-   - Filename
-   - File size
-   - File contents
-   - Progress indicator
-   - Acknowledgment upon completion
+* The receiving computer starts a server that listens for incoming connections
+* The sending computer connects to the server and transmits the file
+* The transfer includes:
 
-## Finding Your IP Address
+  * Filename
+  * File size
+  * File contents
+  * Progress indicator
+  * Acknowledgment upon completion
 
-### Windows
-```powershell
+### Finding Your IP Address
+
+**Windows**
+
+```
 ipconfig
 ```
+
 Look for "IPv4 Address"
 
-### Linux/macOS
-```bash
+**Linux/macOS**
+
+```
 ip addr show    # Linux
 ifconfig        # macOS/Linux
 ```
-Look for "inet" address (usually 192.168.x.x or 10.x.x.x for local networks)
+
+Look for "inet" address (usually 192.168.x.x or 10.x.x.x)
 
 ## Network Configuration
 
-- Ensure both computers are on the same network (or have network connectivity)
-- If you have a firewall enabled, you may need to allow incoming connections on the chosen port
-- For security reasons, this application is designed for trusted local networks only
+* Ensure both computers are on the same network
+* Firewall may need to allow incoming connections on the chosen port
+* For security reasons, this application is designed for trusted local networks only
 
 ## Security Notes
 
-⚠️ **Important**: This is a basic file transfer tool designed for use on trusted local networks. It does not include:
-- Encryption
-- Authentication
-- Authorization
+⚠️ **Important:** This tool is for trusted local networks only. It does **not** include:
 
-Do not use this over untrusted networks or the internet without additional security measures.
+* Encryption
+* Authentication
+* Authorization
+
+Do **not** use over the internet or untrusted networks without additional security.
 
 ## Examples
 
-### Example 1: Transfer a document to another computer on your home network
+### Example 1: Transfer a document
 
-**Computer A (Receiver - IP: 192.168.1.100):**
-```bash
+**Receiver (IP: 192.168.1.100):**
+
+```
 python file_transfer.py receive --port 5000
 ```
 
-**Computer B (Sender):**
-```bash
+**Sender:**
+
+```
 python file_transfer.py send --host 192.168.1.100 --port 5000 --file report.pdf
 ```
 
-### Example 2: Organize received files in a specific folder
+### Example 2: Save files in a custom folder
 
 **Receiver:**
-```bash
+
+```
 python file_transfer.py receive --port 8080 --output-dir ~/Downloads/transfers
 ```
 
 **Sender:**
-```bash
+
+```
 python file_transfer.py send --host 192.168.1.100 --port 8080 --file vacation_photos.zip
 ```
 
 ## Troubleshooting
 
-### Discovery Issues (Machines Not Found)
+### Discovery Issues
 
-If the GUI is not showing other machines in the "Discovered Machines" list:
+If the GUI is not showing other machines:
 
-1. **Check your network**
-   - Ensure all computers are on the same local network (same WiFi or Ethernet subnet)
-   - Check IP addresses are in same range (e.g., 192.168.x.x)
+#### Check your network
 
-2. **Run the Discovery Diagnostic Tool**
-   - Open the GUI and go to **Help → Discovery Diagnostics**
-   - This shows your network status and which machines are visible
-   - Or run: `python test_network_discovery.py`
+* Ensure all computers are on the same subnet
+* Check IP ranges (e.g., 192.168.x.x)
 
-3. **Firewall Settings**
-   - The app uses UDP port 5007 for discovery
-   - Windows Firewall: Allow the app through firewall
-   - Check if your network is set as "Private" on Windows (not "Public")
-   - Some corporate networks block multicast/broadcast - use Manual Connection instead
+#### Run the Discovery Diagnostic Tool
 
-4. **Virtual Networks / VPN**
-   - If using VPN or virtual network adapters, discovery may not work
-   - Use **Manual Connection** to enter IP directly instead
+Use the GUI: **Help → Discovery Diagnostics**
+Or run:
 
-5. **As a Fallback**
-   - Use the **Manual Connection** feature in the GUI
-   - Click "Advanced → Manual Connection..." and enter the IP address directly
-   - Or find the IP address using:
-     - **Windows**: `ipconfig` command (look for "IPv4 Address")
-     - **Linux/macOS**: `ip addr` or `ifconfig` (look for "inet")
+```
+python test_network_discovery.py
+```
 
-### Other Connection Issues
+#### Firewall Settings
+
+* App uses UDP port 5007
+* Windows Firewall: allow the app
+* Windows network should be set to **Private**, not Public
+* Some corporate networks block multicast — use Manual Connection
+
+#### VPN / Virtual Networks
+
+* VPNs may break discovery
+* Use manual IP entry instead
+
+### Other Issues
 
 **Connection refused:**
-- Ensure the receiver is running before attempting to send
-- Verify the IP address is correct
-- Check firewall settings on both computers
-- Ensure both computers are on the same network
+
+* Ensure receiver is running
+* Verify IP
+* Check firewalls
 
 **File not found:**
-- Verify the file path is correct
-- Use absolute paths if relative paths aren't working
+
+* Check file path
+* Use absolute paths
 
 **Permission denied:**
-- Ensure you have read permissions for the file you're sending
-- Ensure you have write permissions in the output directory
+
+* Ensure read access to file
+* Ensure write access to output directory
 
 ## License
 
 This project is open source and available for personal and commercial use.
+
 ## Author
 
-Created by: Scorpionziky89
+Created by: **Scorpionziky89**
 
-for any issues If you encounter any problems,bugs or have any questions, 
-please contact me at scorpionziky89@gmail.com 
+For any issues, bugs, or questions, contact: **[scorpionziky89@gmail.com](mailto:scorpionziky89@gmail.com)**
