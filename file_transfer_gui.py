@@ -176,6 +176,7 @@ class FileTransferGUI:
         self.transfer_paused = False
         self._pause_event = threading.Event()
         self._pause_event.set()  # Initially not paused
+        self._cancel_transfer = False  # Flag to cancel ongoing transfer
 
         # Transfer history (for display in Advanced menu)
         try:
@@ -203,6 +204,10 @@ class FileTransferGUI:
         self._create_receive_tab()
         self._create_magi_tab()
         self._create_about_tab()
+
+        # Update compression status indicator
+        status = "On" if self.compress_before_send else "Off"
+        self.compress_status_var.set(f"Compression: {status}")
 
         # NOW reload config after UI elements (output_dir_var, etc.) are created
         try:
@@ -547,7 +552,7 @@ class FileTransferGUI:
         )
         advanced_menu.add_checkbutton(
             label="Compress before send (ZIP)", variable=tk.BooleanVar(value=self.compress_before_send),
-            command=lambda: setattr(self, 'compress_before_send', not self.compress_before_send)
+            command=self._toggle_compress_before_send
         )
 
         # Settings menu
@@ -1568,6 +1573,13 @@ class FileTransferGUI:
         )
         self.send_discovery_label.pack(anchor=tk.W, padx=5, pady=(0,4))
 
+        # Compression mode indicator
+        self.compress_status_var = tk.StringVar(value="Compression: Off")
+        self.compress_status_label = ttk.Label(
+            receiver_info_frame, textvariable=self.compress_status_var, foreground="darkred"
+        )
+        self.compress_status_label.pack(anchor=tk.W, padx=5, pady=(0,4))
+
         send_row = ttk.Frame(right_frame)
         # Match horizontal padding with other control rows for visual alignment
         send_row.pack(pady=10, fill="x", padx=5)
@@ -1584,6 +1596,13 @@ class FileTransferGUI:
         )
         self.pause_btn.pack(side=tk.LEFT, padx=2)
         self._create_tooltip(self.pause_btn, "Pause/resume ongoing file transfer")
+
+        # Cancel button (hidden until transfer starts)
+        self.cancel_btn = ttk.Button(
+            send_row, text="🛑 CANCEL", command=self._cancel_transfer_fn, state="disabled"
+        )
+        self.cancel_btn.pack(side=tk.LEFT, padx=2)
+        self._create_tooltip(self.cancel_btn, "Cancel ongoing file transfer")
 
         self.resumable_status_var = tk.StringVar(value="Resumable: Off")
         self.resumable_status_label = ttk.Label(
@@ -1615,14 +1634,12 @@ class FileTransferGUI:
         info_frame.pack(fill="x", padx=5)
         self.speed_var = tk.StringVar(value="Speed: -")
         self.eta_file_var = tk.StringVar(value="ETA file: -")
-        self.eta_total_var = tk.StringVar(value="ETA total: -")
         ttk.Label(info_frame, textvariable=self.speed_var).pack(
             side=tk.LEFT, padx=(0, 10)
         )
         ttk.Label(info_frame, textvariable=self.eta_file_var).pack(
             side=tk.LEFT, padx=(0, 10)
         )
-        ttk.Label(info_frame, textvariable=self.eta_total_var).pack(side=tk.LEFT)
 
         log_frame = ttk.LabelFrame(right_frame, text="Transfer Log")
         log_frame.pack(fill="both", expand=True, padx=5, pady=5)
@@ -3019,6 +3036,21 @@ project on GitHub or contributing to its development!
         except Exception as e:
             self._log_send(f"Pause toggle error: {e}")
 
+    def _cancel_transfer_fn(self):
+        """Cancel ongoing file transfer"""
+        try:
+            self._cancel_transfer = True
+            self._log_send("[Transfer] Cancellation requested...")
+            self.cancel_btn.config(state="disabled")
+        except Exception as e:
+            self._log_send(f"Cancel error: {e}")
+
+    def _toggle_compress_before_send(self):
+        """Toggle compression before send and update UI indicator"""
+        self.compress_before_send = not self.compress_before_send
+        status = "On" if self.compress_before_send else "Off"
+        self.compress_status_var.set(f"Compression: {status}")
+
     def _send_file(self):
         """Send file(s) or folder in separate thread"""
         host = self.host_entry.get().strip()
@@ -3050,12 +3082,14 @@ project on GitHub or contributing to its development!
         # Disable button during transfer
         self.send_btn.config(state="disabled")
         self.pause_btn.config(state="normal")
+        self.cancel_btn.config(state="normal")
         self.send_progress["value"] = 0
         self._log_send(f"Starting transfer to {host}:{port}...")
         self._log_send(f"Files to send: {len(self.selected_files)}")
 
-        # Reset pause state
+        # Reset pause and cancel state
         self.transfer_paused = False
+        self._cancel_transfer = False
         self._pause_event.set()
         self.pause_btn.config(text="⏸ PAUSE")
 
@@ -3111,7 +3145,7 @@ project on GitHub or contributing to its development!
         total_size_sent = 0
         transferred_files = []  # Track files for history
         try:
-            client = TransferClient(host, port, pause_event=self._pause_event)
+            client = TransferClient(host, port, pause_event=self._pause_event, cancel_flag_fn=lambda: self._cancel_transfer)
             self._log_send(f"Connecting to {host}:{port}...")
 
             # Progress callback updates UI
@@ -3154,7 +3188,6 @@ project on GitHub or contributing to its development!
                     if speed is not None:
                         speed_str = self._format_transfer_speed(speed)
                         eta_file_str = self._format_eta(eta)
-                        eta_total_str = self._format_eta(total_eta)
                         self.root.after(
                             0, lambda: self.speed_var.set(f"Speed: {speed_str}")
                         )
@@ -3162,18 +3195,9 @@ project on GitHub or contributing to its development!
                             0,
                             lambda: self.eta_file_var.set(f"ETA file: {eta_file_str}"),
                         )
-                        self.root.after(
-                            0,
-                            lambda: self.eta_total_var.set(
-                                f"ETA total: {eta_total_str}"
-                            ),
-                        )
                     else:
                         self.root.after(0, lambda: self.speed_var.set("Speed: -"))
                         self.root.after(0, lambda: self.eta_file_var.set("ETA file: -"))
-                        self.root.after(
-                            0, lambda: self.eta_total_var.set("ETA total: -")
-                        )
                 except Exception:
                     pass
 
@@ -3271,19 +3295,49 @@ project on GitHub or contributing to its development!
                         pass
             elif len(filepaths) == 1 and os.path.isdir(filepaths[0]):
                 # Single directory
-                self._log_send(f"Sending directory: {Path(filepaths[0]).name}")
-                client.send_directory(filepaths[0], progress_callback=progress_callback)
-                self.root.after(
-                    0, lambda: self._log_send("Directory sent successfully!")
-                )
-                # Track directory for history
-                try:
-                    dir_path = Path(filepaths[0])
-                    dir_size = sum(f.stat().st_size for f in dir_path.rglob('*') if f.is_file())
-                    total_size_sent += dir_size
-                    transferred_files.append(dir_path.name)
-                except Exception:
-                    pass
+                # Optional compression: if enabled, compress directory to ZIP
+                if self.compress_before_send:
+                    try:
+                        self._log_send(f"Compressing directory: {Path(filepaths[0]).name}")
+                        compressed_path = self._compress_files_to_zip(filepaths)
+                        self._log_send("Sending compressed archive...")
+                        client.send_single_file(compressed_path, progress_callback=progress_callback)
+                        self.root.after(0, lambda: self._log_send("Directory sent successfully!"))
+                        # Track file for history
+                        try:
+                            total_size_sent += Path(compressed_path).stat().st_size
+                            transferred_files.append(Path(compressed_path).name)
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        self._log_send(f"Warning: compression failed, sending uncompressed: {e}")
+                        # Fallback: send directory uncompressed
+                        self._log_send(f"Sending directory: {Path(filepaths[0]).name}")
+                        client.send_directory(filepaths[0], progress_callback=progress_callback)
+                        self.root.after(0, lambda: self._log_send("Directory sent successfully!"))
+                        # Track directory for history
+                        try:
+                            dir_path = Path(filepaths[0])
+                            dir_size = sum(f.stat().st_size for f in dir_path.rglob('*') if f.is_file())
+                            total_size_sent += dir_size
+                            transferred_files.append(dir_path.name)
+                        except Exception:
+                            pass
+                else:
+                    # Send directory uncompressed
+                    self._log_send(f"Sending directory: {Path(filepaths[0]).name}")
+                    client.send_directory(filepaths[0], progress_callback=progress_callback)
+                    self.root.after(
+                        0, lambda: self._log_send("Directory sent successfully!")
+                    )
+                    # Track directory for history
+                    try:
+                        dir_path = Path(filepaths[0])
+                        dir_size = sum(f.stat().st_size for f in dir_path.rglob('*') if f.is_file())
+                        total_size_sent += dir_size
+                        transferred_files.append(dir_path.name)
+                    except Exception:
+                        pass
             else:
                 # Multiple files/folders
                 self._log_send(f"Sending {len(filepaths)} item(s)...")
@@ -3342,8 +3396,12 @@ project on GitHub or contributing to its development!
                 self._log_send(f"Warning: Failed to record transfer history: {e}")
 
         except Exception as e:
-            self.root.after(0, lambda: self._log_send(f"Error: {e}"))
-            self.root.after(0, lambda: messagebox.showerror("Error", str(e)))
+            error_msg = str(e)
+            if "cancelled" in error_msg.lower():
+                self.root.after(0, lambda: self._log_send(f"[Transfer] Cancelled by user"))
+            else:
+                self.root.after(0, lambda: self._log_send(f"Error: {error_msg}"))
+                self.root.after(0, lambda: messagebox.showerror("Error", error_msg))
         finally:
             # Clean up temporary ZIP files if compression was used
             if self.compress_before_send:
@@ -3361,6 +3419,8 @@ project on GitHub or contributing to its development!
                     pass
             
             self.root.after(0, lambda: self.send_btn.config(state="normal"))
+            self.root.after(0, lambda: self.pause_btn.config(state="disabled"))
+            self.root.after(0, lambda: self.cancel_btn.config(state="disabled"))
             # If send succeeded, clear the selected files list and update UI
             try:
                 if success:
@@ -3940,6 +4000,18 @@ project on GitHub or contributing to its development!
                         pass
             except Exception:
                 pass
+
+            # Compression preference
+            try:
+                cb = data.get("compress_before_send")
+                if isinstance(cb, bool):
+                    self.compress_before_send = cb
+                    # Update indicator if it exists
+                    if hasattr(self, 'compress_status_var'):
+                        status = "On" if self.compress_before_send else "Off"
+                        self.compress_status_var.set(f"Compression: {status}")
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -3983,6 +4055,11 @@ project on GitHub or contributing to its development!
             data["nerv_mode"] = bool(getattr(self, "_nerv_mode", False))
         except Exception:
             data["nerv_mode"] = False
+        # Save compression preference
+        try:
+            data["compress_before_send"] = bool(getattr(self, "compress_before_send", False))
+        except Exception:
+            data["compress_before_send"] = False
         try:
             with open(self._config_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)

@@ -6,5 +6,6 @@
   "receive_port": "5000",
   "output_dir": "C:\\Users\\scorp\\Desktop\\NetLink_0.1.4\\ReceivedFiles",
   "machine_name": "Andrea01",
-  "nerv_mode": false
+  "nerv_mode": false,
+  "compress_before_send": false
 }

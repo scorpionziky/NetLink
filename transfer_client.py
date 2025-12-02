@@ -16,10 +16,11 @@ class TransferClient:
     MAX_RETRIES = 3  # Maximum retry attempts on connection error
     RETRY_DELAY = 2  # Seconds to wait between retries
     
-    def __init__(self, host, port, pause_event=None):
+    def __init__(self, host, port, pause_event=None, cancel_flag_fn=None):
         self.host = host
         self.port = port
         self.pause_event = pause_event  # threading.Event to handle pause/resume
+        self.cancel_flag_fn = cancel_flag_fn  # callable that returns True if transfer should be cancelled
         
     def send_file(self, filepath, progress_callback=None):
         """Send a file or directory to the server (backward compatible)"""
@@ -93,6 +94,9 @@ class TransferClient:
             with open(filepath, 'rb') as f:
                 f.seek(offset)
                 while sent < filesize:
+                    # Check if transfer should be cancelled
+                    if self.cancel_flag_fn and self.cancel_flag_fn():
+                        raise Exception("Transfer cancelled by user")
                     self._wait_if_paused()
                     to_read = min(self.BUFFER_SIZE, filesize - sent)
                     data = f.read(to_read)
@@ -215,6 +219,9 @@ class TransferClient:
                 sent = 0
                 with open(filepath, 'rb') as f:
                     while sent < filesize:
+                        # Check if transfer should be cancelled
+                        if self.cancel_flag_fn and self.cancel_flag_fn():
+                            raise Exception("Transfer cancelled by user")
                         self._wait_if_paused()  # Check and block if paused
                         data = f.read(self.BUFFER_SIZE)
                         if not data:
@@ -314,6 +321,9 @@ class TransferClient:
                 sent = 0
                 with open(filepath, 'rb') as f:
                     while sent < filesize:
+                        # Check if transfer should be cancelled
+                        if self.cancel_flag_fn and self.cancel_flag_fn():
+                            raise Exception("Transfer cancelled by user")
                         self._wait_if_paused()  # Check and block if paused
                         data = f.read(self.BUFFER_SIZE)
                         if not data:
