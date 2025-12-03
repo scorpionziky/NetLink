@@ -3763,36 +3763,44 @@ project on GitHub or contributing to its development!
             # Normalize path and open the containing folder, selecting the file when possible.
             try:
                 fullpath = os.path.abspath(fullpath)
+                
+                # If file doesn't exist at the saved path, try to find it in the current output directory
+                # This handles the case where the save directory was changed after the file was received
+                if not os.path.exists(fullpath):
+                    filename = os.path.basename(fullpath)
+                    current_output_dir = self.output_dir_var.get().strip()
+                    if current_output_dir:
+                        alt_fullpath = os.path.join(current_output_dir, filename)
+                        if os.path.exists(alt_fullpath):
+                            fullpath = alt_fullpath
+                
                 folder = os.path.dirname(fullpath)
 
                 if sys.platform.startswith("win"):
-                    # If file exists, request Explorer to select it using a single argument
-                    # e.g. explorer "/select,C:\path\to\file.txt"
+                    # On Windows, open the containing folder
                     if os.path.exists(fullpath):
                         try:
-                            subprocess.Popen(["explorer", f"/select,{fullpath}"])
+                            os.startfile(folder)
                         except Exception:
-                            # Fallback: open containing folder
-                            try:
-                                os.startfile(folder)
-                            except Exception:
-                                pass
+                            pass
                     else:
-                        # If file missing, open the folder if it exists
-                        if os.path.isdir(folder):
+                        # If file missing, open the current configured folder
+                        current_folder = self.output_dir_var.get().strip()
+                        if current_folder and os.path.isdir(current_folder):
                             try:
-                                os.startfile(folder)
+                                os.startfile(current_folder)
                             except Exception:
                                 pass
                         else:
-                            # As last resort, open user's home folder
-                            try:
-                                os.startfile(os.path.expanduser("~"))
-                            except Exception:
-                                pass
+                            # If that doesn't exist either, try the folder from saved path
+                            if os.path.isdir(folder):
+                                try:
+                                    os.startfile(folder)
+                                except Exception:
+                                    pass
 
                 elif sys.platform == "darwin":
-                    # macOS: use 'open -R' to reveal the file, or open the folder
+                    # macOS: use 'open -R' to reveal the file
                     if os.path.exists(fullpath):
                         try:
                             subprocess.Popen(["open", "-R", fullpath])
@@ -3802,21 +3810,37 @@ project on GitHub or contributing to its development!
                             except Exception:
                                 pass
                     else:
-                        try:
-                            subprocess.Popen(["open", folder])
-                        except Exception:
-                            pass
+                        # If file missing, try current configured folder
+                        current_folder = self.output_dir_var.get().strip()
+                        if current_folder and os.path.isdir(current_folder):
+                            try:
+                                subprocess.Popen(["open", current_folder])
+                            except Exception:
+                                pass
+                        elif os.path.isdir(folder):
+                            try:
+                                subprocess.Popen(["open", folder])
+                            except Exception:
+                                pass
 
                 else:
-                    # Linux/other: no reliable cross-distro 'select' behaviour; open folder
-                    try:
-                        subprocess.Popen(["xdg-open", folder])
-                    except Exception:
+                    # Linux/other: open folder with xdg-open
+                    current_folder = self.output_dir_var.get().strip()
+                    if current_folder and os.path.isdir(current_folder):
+                        folder_to_open = current_folder
+                    elif os.path.isdir(folder):
+                        folder_to_open = folder
+                    else:
+                        folder_to_open = None
+                    
+                    if folder_to_open:
                         try:
-                            # fallback using generic open
-                            subprocess.Popen(["open", folder])
+                            subprocess.Popen(["xdg-open", folder_to_open])
                         except Exception:
-                            pass
+                            try:
+                                subprocess.Popen(["open", folder_to_open])
+                            except Exception:
+                                pass
             except Exception:
                 pass
         except Exception:
