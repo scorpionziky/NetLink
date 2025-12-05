@@ -27,52 +27,36 @@ class TransferServer:
             server_socket.bind(('0.0.0.0', self.port))
             server_socket.listen(1)
             
-            print(f"Server listening on port {self.port}")
-            print(f"Files will be saved to: {self.output_dir.absolute()}")
-            print("Waiting for connections...")
+            # Server running silently
             
             while True:
                 try:
                     conn, addr = server_socket.accept()
-                    print(f"\nConnection from {addr[0]}:{addr[1]}")
                     result = self._receive_files(conn)
                     # Do not return here; keep server running to accept further connections.
-                    if result:
-                        print(f"Received result: {result}")
-                except Exception as e:
-                    print(f"Error handling connection: {e}")
+                except Exception:
+                    pass
     
     def _receive_files(self, conn):
         """Receive file(s) from the connected client"""
         try:
             # Read magic header to determine protocol version
-            print("[DEBUG] _receive_files: waiting for 4-byte magic header")
             magic_data = self._recv_exact(conn, 4)
             if magic_data is None or not magic_data:
-                print("[DEBUG] _receive_files: magic header not received")
                 return
             
             magic = struct.unpack('!I', magic_data)[0]
-            print(f"[DEBUG] _receive_files: magic header = 0x{magic:08X}")
             
             if magic == 0xFFFF0001:
-                # Single-file protocol
-                print("[DEBUG] _receive_files: detected SINGLE-FILE protocol")
                 return self._receive_files_single(conn)
             elif magic == 0xFFFF0002:
-                # Multi-file protocol
-                print("[DEBUG] _receive_files: detected MULTI-FILE protocol")
                 return self._receive_files_multi(conn)
             elif magic == 0xFFFF0003:
-                # Resumable single-file protocol
-                print("[DEBUG] _receive_files: detected RESUMABLE-SINGLE protocol")
                 return self._receive_files_resumable_single(conn)
             else:
-                print(f"[ERROR] _receive_files: unknown magic header 0x{magic:08X}")
                 return None
                 
-        except Exception as e:
-            print(f"\nError receiving files: {e}")
+        except Exception:
             return None
         finally:
             conn.close()
@@ -121,7 +105,7 @@ class TransferServer:
                 return None
             expected_digest = sha256_data  # raw bytes
 
-            print(f"[DEBUG] Resumable receive: {filename} size={filesize} chunk={chunk_size}")
+
 
             # Prepare output paths
             output_path = self.output_dir / filename
@@ -177,10 +161,7 @@ class TransferServer:
 
             # If we didn't get all bytes, just return (client may resume later)
             if received < filesize:
-                print("\nPartial transfer saved. Waiting for resume...")
                 return None
-
-            print(f"\nAll bytes received for {filename}. Verifying SHA256...")
 
             # Compute SHA256 of partial file
             h = hashlib.sha256()
