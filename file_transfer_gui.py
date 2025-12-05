@@ -798,14 +798,6 @@ class FileTransferGUI:
             "- Check 'Transfer Log' and 'Receiver Log' for detailed messages and errors.\n\n"
             "If you need more help, collect the logs and diagnostics output and open an issue on GitHub including network details and the diagnostics output.\n"
         )
-
-        text.insert(tk.END, guide_content)
-        text.config(state="disabled")
-        try:
-            self._ensure_dialog_visible(guide)
-        except Exception:
-            pass
-
     def _send_logs(self):
         """Collect GUI logs and let the user save them (Save As), open the saved file and copy path to clipboard."""
         try:
